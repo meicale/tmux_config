@@ -384,10 +384,10 @@ tmux_conf_urlscan_options="--compact --dedupe"
 # this is the place to override or undo settings
 
 # increase history size
-#set -g history-limit 10000
+set -g history-limit 10000
 
 # start with mouse mode enabled
-#set -g mouse on
+set -g mouse on
 
 # force Vi mode
 #   really you should export VISUAL or EDITOR environment variable, see manual
@@ -395,11 +395,11 @@ tmux_conf_urlscan_options="--compact --dedupe"
 #set -g mode-keys vi
 
 # replace C-b by C-a instead of using both prefixes
-# set -gu prefix2
-# unbind C-a
+set -gu prefix2
+unbind C-" "
 # unbind C-b
-# set -g prefix C-a
-# bind C-a send-prefix
+set -g prefix C-" "
+bind C-" " send-prefix
 
 # if you don't want Oh my tmux! to alter a binding or a setting, use #!important
 # bind c new-window -c '#{pane_current_path}' #!important
@@ -433,6 +433,65 @@ tmux_conf_update_plugins_on_reload=true
 #   - false
 tmux_conf_uninstall_plugins_on_reload=true
 
+bind-key "C-h" run-shell "sesh connect \"$(
+	sesh list | fzf-tmux -p 55%,60% \
+		--no-sort --ansi --border-label ' sesh ' --prompt '⚡  ' \
+		--header '  ^a all ^t tmux ^g configs ^x zoxide ^d tmux kill ^f find' \
+		--bind 'tab:down,btab:up' \
+		--bind 'ctrl-a:change-prompt(⚡  )+reload(sesh list)' \
+		--bind 'ctrl-t:change-prompt(🪟  )+reload(sesh list -t)' \
+		--bind 'ctrl-g:change-prompt(⚙️  )+reload(sesh list -c)' \
+		--bind 'ctrl-x:change-prompt(📁  )+reload(sesh list -z)' \
+		--bind 'ctrl-f:change-prompt(🔎  )+reload(fd -H -d 2 -t d -E .Trash . ~)' \
+		--bind 'ctrl-d:execute(tmux kill-session -t {})+change-prompt(⚡  )+reload(sesh list)'
+)\""
+
+# TODO: differ from default
+# TODO: default is next-window
+bind C-l send-keys C-l \; run 'sleep 0.2' \; clear-history
+
+# window navigation
+unbind n
+unbind p
+# TODO: differ from default
+# TODO: unbind default in config
+bind -r C-j previous-window # select previous window
+bind -r C-k next-window     # select next window
+bind Tab last-window        # move to last active window
+
+
+# Open a new pane that floats and run the script in it
+save_complete_history_full_filename="/tmp/save_complete_history_latest.log"
+# tmux capture-pane -J -S "-${history_limit}" -p > "${file}"
+
+bind C-o run-shell 'tmux_log_history_limit="$(tmux display-message -p -F "#{history_limit}")"; tmux capture-pane -J -S "-${tmux_log_history_limit}" -p > "${save_complete_history_full_filename}"; tmux new-window -n tmux_log "NVIM_APPNAME=n nvim ${save_complete_history_full_filename}"'
+
+bind C-i run-shell 'tmux new-window -n inbox "NVIM_APPNAME=n nvim ~/workspace/inbox/log.norg"'
+
+set-option -g allow-passthrough on
+
+
+# movement in tmux panes and vim splits
+#pain_control.tmux  set-clipboard on # this is for MacOS
+# https://github.com/alexghergh/nvim-tmux-navigation#configuration
+# Smart pane switching with awareness of Vim splits.
+# See: https://github.com/christoomey/vim-tmux-navigator
+# This configuration has to comply with ~/.config/nvim/nvim-tmux-navigation
+is_vim="ps -o state= -o comm= -t '#{pane_tty}' \
+    | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)?$'"
+bind-key -n 'C-h' if-shell "$is_vim" 'send-keys C-h' 'select-pane -L'
+bind-key -n 'C-j' if-shell "$is_vim" 'send-keys C-j' 'select-pane -D'
+bind-key -n 'C-k' if-shell "$is_vim" 'send-keys C-k' 'select-pane -U'
+bind-key -n 'C-l' if-shell "$is_vim" 'send-keys C-l' 'select-pane -R'
+bind-key -n 'C-u' if-shell "$is_vim" 'send-keys C-u'  'select-pane -l' #last pane
+bind-key -n 'C-g' if-shell "$is_vim" 'send-keys C-g' 'select-pane -t:.+' #next pane
+bind-key -T copy-mode-vi 'C-h' select-pane -L
+bind-key -T copy-mode-vi 'C-j' select-pane -D
+bind-key -T copy-mode-vi 'C-k' select-pane -U
+bind-key -T copy-mode-vi 'C-l' select-pane -R
+bind-key -T copy-mode-vi 'C-u' select-pane -l #last pane
+bind-key -T copy-mode-vi 'C-g' select-pane -t:.+ # next pane
+
 # /!\ the tpm bindings differ slightly from upstream:
 #   - installing plugins: <prefix> + I
 #   - uninstalling plugins: <prefix> + Alt + u
@@ -443,12 +502,20 @@ tmux_conf_uninstall_plugins_on_reload=true
 
 # to enable a plugin, use the 'set -g @plugin' syntax:
 # visit https://github.com/tmux-plugins for available plugins
-#set -g @plugin 'tmux-plugins/tmux-copycat'
-#set -g @plugin 'tmux-plugins/tmux-cpu'
-#set -g @plugin 'tmux-plugins/tmux-resurrect'
-#set -g @plugin 'tmux-plugins/tmux-continuum'
-#set -g @continuum-restore 'on'
+# set -g @plugin 'tmux-plugins/tmux-copycat'
+# set -g @plugin 'tmux-plugins/tmux-cpu'
+# set -g @plugin 'tmux-plugins/tmux-resurrect'
+# set -g @plugin 'tmux-plugins/tmux-continuum'
+# set -g @continuum-restore 'on'
+set -g @plugin 'omerxx/tmux-floax'
 
+# set -g @plugin 'meicale/tmux-logging'
+# # Bind to open the latest logfile in a new pane
+# tmux_pane_log_path='/tmp/tmux_log'
+# set -g @logging-path "${tmux_pane_log_path}"
+# set -g @screen-capture-path "${tmux_pane_log_path}"
+# set -g @save-complete-history-path "${tmux_pane_log_path}"
+# bind o run-shell 'latest_log=$(find "${tmux_pane_log_path}" -name "tmux-*.log" -printf "%T@ %p\n" | sort -n | tail -1 | cut -d" " -f2-); tmux new-window -n "Latest Log" "NVIM_APPNAME=n nvim \"${latest_log}\""'
 
 # -- custom variables ----------------------------------------------------------
 
