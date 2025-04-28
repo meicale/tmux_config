@@ -466,7 +466,8 @@ save_complete_history_full_filename="/tmp/save_complete_history_latest.log"
 
 bind C-o run-shell 'tmux_log_history_limit="$(tmux display-message -p -F "#{history_limit}")"; tmux capture-pane -J -S "-${tmux_log_history_limit}" -p > "${save_complete_history_full_filename}"; tmux new-window -n tmux_log "NVIM_APPNAME=n nvim ${save_complete_history_full_filename}"'
 
-bind C-i run-shell 'tmux new-window -n inbox "NVIM_APPNAME=n nvim ~/workspace/inbox/log.norg"'
+# C-i will create a new windows, wired
+bind C-y run-shell 'tmux new-window -n inbox "NVIM_APPNAME=n nvim ~/workspace/inbox/log.norg"'
 
 set-option -g allow-passthrough on
 
